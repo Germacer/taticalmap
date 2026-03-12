@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>STRIKE-SCANNER V12 - Secure Access</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@100;400;700;800&display=swap');
+
+        :root {
+            --tactical-green: #00ff41;
+            --font-hud: 'JetBrains Mono', monospace;
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: #000; overflow: hidden; font-family: var(--font-hud);
+            color: var(--tactical-green);
+        }
+
+        /* --- SCREENSPLASH / LOGIN --- */
+        #splash-screen {
+            position: fixed; inset: 0; background: #000; z-index: 2000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            border: 20px solid #050505;
+        }
+
+        .login-box {
+            width: 300px; padding: 30px; border: 1px solid var(--tactical-green);
+            background: rgba(0,20,0,0.2); text-align: center;
+        }
+
+        .login-box h2 { font-size: 0.9rem; letter-spacing: 3px; margin-bottom: 20px; }
+
+        input, select {
+            width: 100%; background: #000; border: 1px solid var(--tactical-green);
+            color: var(--tactical-green); padding: 10px; margin-bottom: 15px;
+            font-family: var(--font-hud); outline: none; box-sizing: border-box;
+        }
+
+        .btn-access {
+            width: 100%; padding: 12px; background: var(--tactical-green);
+            color: #000; font-weight: 800; border: none; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+
+        /* --- INTERFACE PRINCIPAL --- */
+        #main-interface { display: none; } /* Oculta até o login */
+
+        #map { position: absolute; inset: 0; z-index: 1; filter: grayscale(1) sepia(1) hue-rotate(85deg) brightness(0.4) contrast(1.5); }
+
+        #sat-display {
+            position: fixed; top: 25px; right: 25px; z-index: 1000;
+            font-size: 0.75rem; font-weight: 800; letter-spacing: 2px;
+            text-transform: uppercase; text-shadow: 0 0 10px var(--tactical-green);
+        }
+
+        #absolute-center {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 500; pointer-events: none; display: flex; flex-direction: column; align-items: center;
+        }
+        .crosshair { width: 60px; height: 60px; position: relative; display: flex; justify-content: center; align-items: center; }
+        .crosshair::before { content: ""; position: absolute; width: 30px; height: 2px; background: var(--tactical-green); box-shadow: 0 0 10px var(--tactical-green); }
+        .crosshair::after { content: ""; position: absolute; width: 2px; height: 30px; background: var(--tactical-green); box-shadow: 0 0 10px var(--tactical-green); }
+
+        #hud-main-box {
+            position: absolute; left: 60px; padding: 15px; background: rgba(0, 15, 0, 0.85); 
+            border-left: 4px solid var(--tactical-green); min-width: 260px; backdrop-filter: blur(10px);
+        }
+
+        #full-intel-report {
+            margin-top: 50px; color: #ffffff; font-weight: 800; text-transform: uppercase;
+            font-size: 0.9rem; line-height: 1.5; text-shadow: 2px 2px 5px #000;
+            display: none; text-align: center; width: 800px;
+        }
+
+        /* --- OUTROS ELEMENTOS --- */
+        #notif-hub { position: fixed; top: 25px; left: 25px; z-index: 1000; }
+        #notif-btn { width: 60px; height: 60px; border-radius: 50%; background: rgba(0,20,0,0.85); border: 1px solid var(--tactical-green); color: var(--tactical-green); font-size: 1.5rem; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        #notif-badge { position: absolute; top: 0; right: 0; background: red; color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 10px; display: none; }
+        #intel-overlay { position: fixed; top: 100px; left: 25px; z-index: 900; width: 320px; max-height: 70vh; overflow-y: auto; display: none; scrollbar-width: none; }
+        .saved-card { background: rgba(0, 15, 0, 0.95); border: 1px solid var(--tactical-green); padding: 15px; margin-bottom: 12px; color: white; font-size: 0.75rem; }
+        .btn-card { background: none; border: 1px solid var(--tactical-green); color: var(--tactical-green); font-size: 0.6rem; padding: 6px; cursor: pointer; margin-right: 5px; }
+        #footer-hud { position: fixed; bottom: 12px; width: 100%; display: flex; justify-content: center; gap: 30px; z-index: 500; pointer-events: none; font-size: 0.65rem; letter-spacing: 2px; opacity: 0.8; text-transform: uppercase; }
+        #fab { position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: rgba(0,20,0,0.8); border: 2px solid var(--tactical-green); color: var(--tactical-green); font-size: 2rem; cursor: pointer; z-index: 600; }
+        .label { opacity: 0.5; font-size: 0.5rem; display: block; }
+        .value { font-weight: 800; display: block; color: #fff; text-transform: uppercase; font-size: 0.75rem; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+<div id="splash-screen">
+    <div class="login-box" id="step-1">
+        <h2>GERMACER ACCESS</h2>
+        <input type="text" id="user-code" placeholder="CÓDIGO OPERADOR">
+        <input type="password" id="user-pass" placeholder="PASSWORD">
+        <button class="btn-access" onclick="checkLogin()">VERIFY_ID</button>
+    </div>
+
+    <div class="login-box" id="step-2" style="display:none;">
+        <h2>LINK UPLINK SELECT</h2>
+        <select id="sat-select">
+            <option value="Germacer SAT-M51">Germacer SAT-M51</option>
+            <option value="Germacer SAT-GOTP">Germacer SAT-GOTP</option>
+            <option value="Germacer SAT-AirOp">Germacer SAT-AirOp</option>
+        </select>
+        <button class="btn-access" onclick="startSystem()">ENGAGE_LINK</button>
+    </div>
+</div>
+
+<div id="main-interface">
+    <div id="sat-display">LINKING...</div>
+    
+    <div id="notif-hub">
+        <button id="notif-btn" onclick="toggleIntelDisplay()">📡 <span id="notif-badge">0</span></button>
+    </div>
+
+    <div id="intel-overlay"></div>
+
+    <div id="absolute-center">
+        <div style="display: flex; align-items: center; position: relative;">
+            <div class="crosshair"></div>
+            <div id="hud-main-box">
+                <span class="label">NATION:</span>
+                <span id="hud-country" class="value">---</span>
+                <span class="label">REGION:</span>
+                <span id="hud-region" class="value">---</span>
+                <span class="label">OBJECTIVE:</span>
+                <span id="hud-name" class="value">---</span>
+                <span class="label">COORDS:</span>
+                <span id="hud-coords" class="value">---</span>
+            </div>
+        </div>
+        <div id="full-intel-report"></div>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="footer-hud">
+        <span>Germacer Ind.</span>
+        <span>Brazil</span>
+        <span id="live-clock">--/--/-- --:--:--</span>
+        <span>Força Tática Privada</span>
+        <span>GOTP-G</span>
+    </div>
+
+    <button id="fab" onclick="saveTarget()">+</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // SISTEMA DE LOGIN
+    function checkLogin() {
+        const code = document.getElementById('user-code').value;
+        const pass = document.getElementById('user-pass').value;
+        if(code === "1234" && pass === "1234") {
+            document.getElementById('step-1').style.display = 'none';
+            document.getElementById('step-2').style.display = 'block';
+        } else {
+            alert("ACCESS DENIED: INVALID CREDENTIALS");
+        }
+    }
+
+    function startSystem() {
+        // Ativa Fullscreen
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen();
+        }
+        
+        // Define Satélite
+        const sat = document.getElementById('sat-select').value;
+        document.getElementById('sat-display').innerText = `DATA_LINK: ${sat}`;
+        
+        // Troca telas
+        document.getElementById('splash-screen').style.display = 'none';
+        document.getElementById('main-interface').style.display = 'block';
+        
+        // Inicializa Mapa e Relógio
+        initMap();
+        setInterval(updateClock, 1000);
+    }
+
+    // MAPA E HUD
+    let map, savedTargets = [], currentIntel = {}, activeReEngageId = null;
+
+    function initMap() {
+        map = L.map('map', { center: [-19.5925, -46.9422], zoom: 16, zoomControl: false, attributionControl: false });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        map.on('moveend', updateHud);
+        map.on('movestart', () => {
+            document.getElementById('full-intel-report').style.display = 'none';
+            activeReEngageId = null;
+        });
+        updateHud();
+    }
+
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('live-clock').innerText = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR')}`;
+    }
+
+    async function updateHud() {
+        const c = map.getCenter();
+        document.getElementById('hud-coords').innerText = `${c.lat.toFixed(5)} / ${c.lng.toFixed(5)}`;
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${c.lat}&lon=${c.lng}&zoom=18&addressdetails=1`);
+            const data = await res.json();
+            if (data.address) {
+                currentIntel = {
+                    road: data.address.road || "SDR_UNDEFINED",
+                    bairro: data.address.suburb || data.address.road || "---",
+                    city: data.address.city || data.address.town || "---",
+                    state: data.address.state || "---",
+                    country: data.address.country || "---",
+                    cep: data.address.postcode || "---",
+                    lat: c.lat.toFixed(5), lng: c.lng.toFixed(5)
+                };
+                document.getElementById('hud-country').innerText = currentIntel.country;
+                document.getElementById('hud-region').innerText = `${currentIntel.city} / ${currentIntel.state}`;
+                document.getElementById('hud-name').innerText = currentIntel.road !== "SDR_UNDEFINED" ? currentIntel.road : currentIntel.bairro;
+            }
+        } catch(e) {}
+    }
+
+    function toggleIntelDisplay() {
+        const overlay = document.getElementById('intel-overlay');
+        overlay.style.display = (overlay.style.display === "block") ? "none" : "block";
+    }
+
+    function saveTarget() {
+        savedTargets.push({...currentIntel, id: Date.now()});
+        updateUI();
+    }
+
+    function updateUI() {
+        const badge = document.getElementById('notif-badge');
+        badge.innerText = savedTargets.length;
+        badge.style.display = savedTargets.length > 0 ? "block" : "none";
+        renderCards();
+    }
+
+    function renderCards() {
+        const container = document.getElementById('intel-overlay');
+        container.innerHTML = "";
+        savedTargets.forEach((t) => {
+            const card = document.createElement('div');
+            card.className = 'saved-card';
+            card.innerHTML = `
+                <strong>${t.road}</strong><br>${t.bairro}<br>
+                <div style="margin-top:10px">
+                    <button class="btn-card" onclick="reEngage(${t.id})">RE-ENGAGE</button>
+                    <button class="btn-card" style="color:red; border-color:red" onclick="deleteTarget(${t.id})">EXCLUIR</button>
+                </div>
+            `;
+            container.prepend(card);
+        });
+    }
+
+    function reEngage(id) {
+        const t = savedTargets.find(item => item.id === id);
+        if(!t) return;
+        activeReEngageId = id;
+        map.flyTo([t.lat, t.lng], 18);
+        document.getElementById('full-intel-report').innerHTML = `
+            ${t.country} | ${t.state} | ${t.city}<br>
+            BAIRRO: ${t.bairro} | RUA: ${t.road}<br>
+            POS: ${t.lat} , ${t.lng}<br>
+            ALT: 102M | CEP: ${t.cep}
+        `;
+        document.getElementById('full-intel-report').style.display = 'block';
+        toggleIntelDisplay();
+    }
+
+    function deleteTarget(id) {
+        if(activeReEngageId === id) document.getElementById('full-intel-report').style.display = 'none';
+        savedTargets = savedTargets.filter(t => t.id !== id);
+        updateUI();
+    }
+</script>
+</body>
+</html>
