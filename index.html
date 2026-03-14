@@ -179,6 +179,9 @@
         // Inicializa Mapa e Relógio
         initMap();
         setInterval(updateClock, 1000);
+        
+        // Inicia Loop do Joystick
+        requestAnimationFrame(gamepadLoop);
     }
 
     // MAPA E HUD
@@ -276,6 +279,48 @@
         if(activeReEngageId === id) document.getElementById('full-intel-report').style.display = 'none';
         savedTargets = savedTargets.filter(t => t.id !== id);
         updateUI();
+    }
+
+    // --- FUNCIONALIDADE JOYSTICK: MOVIMENTAÇÃO E ZOOM ---
+    let lastZoomTime = 0;
+
+    function gamepadLoop() {
+        const gamepads = navigator.getGamepads();
+        const gp = gamepads[0];
+
+        if (gp) {
+            const deadzone = 0.15;
+            const sensitivity = 0.0003; // Sensibilidade reduzida
+            const zoomSpeed = 0.05;    // Velocidade do zoom incremental
+
+            // JOYSTICK ESQUERDO: CONTROLE DE POSIÇÃO (MAPA)
+            const axes0 = Math.abs(gp.axes[0]) > deadzone ? gp.axes[0] : 0;
+            const axes1 = Math.abs(gp.axes[1]) > deadzone ? gp.axes[1] : 0;
+
+            if (axes0 !== 0 || axes1 !== 0) {
+                const currentCenter = map.getCenter();
+                // Velocidade adaptativa: quanto mais zoom out, mais rápido ele se move
+                const adaptiveMult = Math.pow(2, 18 - map.getZoom()) * sensitivity;
+                
+                map.setView([
+                    currentCenter.lat - (axes1 * adaptiveMult),
+                    currentCenter.lng + (axes0 * adaptiveMult)
+                ], map.getZoom(), { animate: false });
+            }
+
+            // JOYSTICK DIREITO: CONTROLE DE ZOOM
+            const axes3 = Math.abs(gp.axes[3]) > deadzone ? gp.axes[3] : 0;
+            const now = Date.now();
+
+            if (axes3 !== 0 && now - lastZoomTime > 100) { // Throttle para não zoomar rápido demais
+                const currentZoom = map.getZoom();
+                // Se analógico para cima (negativo), zoom in. Para baixo, zoom out.
+                if (axes3 < 0) map.setZoom(currentZoom + zoomSpeed);
+                if (axes3 > 0) map.setZoom(currentZoom - zoomSpeed);
+                lastZoomTime = now;
+            }
+        }
+        requestAnimationFrame(gamepadLoop);
     }
 </script>
 </body>
