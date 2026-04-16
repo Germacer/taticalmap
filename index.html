@@ -8,6 +8,7 @@
         :root {
             --bg-color: #000000;
             --text-color: #ffffff;
+            --accent-color: rgba(255, 255, 255, 0.2);
         }
 
         * {
@@ -23,6 +24,37 @@
             height: 100vh;
             display: flex;
             overflow: hidden;
+        }
+
+        /* Camada de Início (Overlay) */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.8s ease;
+        }
+
+        #startBtn {
+            padding: 15px 30px;
+            background: transparent;
+            color: white;
+            border: 1px solid white;
+            cursor: pointer;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #startBtn:hover {
+            background: white;
+            color: black;
         }
 
         /* Lado Esquerdo: Velocidade */
@@ -56,42 +88,36 @@
             opacity: 0.6;
         }
 
-        /* Lado Direito: Container centralizador */
-.right-panel {
-    width: 50%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--bg-color);
-    position: relative;
-    overflow: visible; /* Permite que o planeta grande apareça */
-}
+        /* Lado Direito */
+        .right-panel {
+            width: 50%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-color);
+            position: relative;
+            overflow: visible;
+        }
 
-.planet-image {
-    /* Em vez de 150%, vamos usar vh (viewport height) 
-       isso garante que ele seja baseado na altura da tela do tablet */
-    height: 150vh; 
-    width: 150vh; 
-    
-    position: absolute;
-    /* Centraliza e empurra para a direita para dar o efeito de "meio planeta" */
-    right: -45vh; 
-    
-    object-fit: cover;
-    border-radius: 50%;
-    box-shadow: 0 0 100px rgba(255, 255, 255, 0.1);
-    animation: rotatePlanet 120s linear infinite; 
-    transition: opacity 0.5s ease;
-    z-index: 1;
-}
+        .planet-image {
+            height: 150vh; 
+            width: 150vh; 
+            position: absolute;
+            right: -45vh; 
+            object-fit: cover;
+            border-radius: 50%;
+            box-shadow: 0 0 100px rgba(255, 255, 255, 0.1);
+            animation: rotatePlanet 120s linear infinite; 
+            transition: opacity 0.5s ease;
+            z-index: 1;
+        }
 
         @keyframes rotatePlanet {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
 
-        /* --- BOTÃO E MENU DE SELEÇÃO --- */
         .controls {
             position: absolute;
             bottom: 20px;
@@ -108,12 +134,7 @@
             outline: none;
             cursor: pointer;
             font-size: 0.9rem;
-            backdrop-filter: blur(5px); /* Efeito de vidro desfoque */
-        }
-
-        #planetSelector option {
-            background: #111;
-            color: white;
+            backdrop-filter: blur(5px);
         }
 
         #gps-status {
@@ -121,13 +142,17 @@
             bottom: 20px;
             left: 20px;
             font-size: 0.7rem;
-            color: #222;
+            color: #444;
             text-transform: uppercase;
             letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
+
+    <div id="overlay">
+        <button id="startBtn">Iniciar Experiência</button>
+    </div>
 
     <div class="left-panel">
         <div class="speedometer">
@@ -139,7 +164,6 @@
 
     <div class="right-panel">
         <img id="displayPlanet" class="planet-image" src="https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg" alt="Planeta">
-        
         <div class="controls">
             <select id="planetSelector">
                 <option value="lua">🌙 Lua</option>
@@ -152,7 +176,6 @@
     </div>
 
     <script>
-        // Banco de dados de imagens (Links diretos)
         const planets = {
             lua: "https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg",
             terra: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/The_Blue_Marble_%28remastered%29.jpg/600px-The_Blue_Marble_%28remastered%29.jpg",
@@ -163,19 +186,41 @@
 
         const selector = document.getElementById('planetSelector');
         const planetImg = document.getElementById('displayPlanet');
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('startBtn');
 
-        // Função para trocar o planeta
+        // --- FUNÇÃO PARA TELA CHEIA ---
+        function activateFullScreen() {
+            const docEl = document.documentElement;
+            
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen();
+            } else if (docEl.mozRequestFullScreen) { /* Firefox */
+                docEl.mozRequestFullScreen();
+            } else if (docEl.webkitRequestFullscreen) { /* Chrome, Safari e Opera */
+                docEl.webkitRequestFullscreen();
+            } else if (docEl.msRequestFullscreen) { /* IE/Edge */
+                docEl.msRequestFullscreen();
+            }
+
+            // Esconde o overlay após clicar
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 800);
+        }
+
+        startBtn.addEventListener('click', activateFullScreen);
+
+        // Troca de planeta
         selector.addEventListener('change', (e) => {
             const choice = e.target.value;
-            planetImg.style.opacity = '0'; // Efeito de fade out
-            
+            planetImg.style.opacity = '0';
             setTimeout(() => {
                 planetImg.src = planets[choice];
-                planetImg.style.opacity = '1'; // Efeito de fade in
+                planetImg.style.opacity = '1';
             }, 500);
         });
 
-        // --- LÓGICA DO GPS ---
+        // GPS
         const speedElement = document.getElementById('speed');
         const statusElement = document.getElementById('gps-status');
 
