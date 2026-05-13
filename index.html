@@ -2,242 +2,158 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dashboard Sistema Solar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Seta Interativa - Bússola</title>
     <style>
-        :root {
-            --bg-color: #000000;
-            --text-color: #ffffff;
-            --accent-color: rgba(255, 255, 255, 0.2);
-        }
-
-        * {
+        /* Estilos básicos para centrar o conteúdo e dar um visual limpo */
+        body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            height: 100vh;
             display: flex;
-            overflow: hidden;
-        }
-
-        /* Camada de Início (Overlay) */
-        #overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: black;
-            display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            z-index: 1000;
-            transition: opacity 0.8s ease;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            overflow: hidden; /* Evita que a página faça scroll acidental */
         }
 
         #startBtn {
             padding: 15px 30px;
-            background: transparent;
+            font-size: 18px;
+            background-color: #007bff;
             color: white;
-            border: 1px solid white;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 1rem;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        #startBtn:hover {
-            background: white;
-            color: black;
-        }
-
-        /* Lado Esquerdo: Velocidade */
-        .left-panel {
-            width: 50%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2;
-        }
-
-        .speedometer {
-            text-align: center;
-        }
-
-        .speed-value {
-            font-size: 14rem;
-            font-weight: 800;
-            line-height: 0.8;
-            letter-spacing: -5px;
-        }
-
-        .speed-unit {
-            display: block;
-            font-size: 1.5rem;
-            font-weight: 300;
-            text-transform: uppercase;
-            letter-spacing: 15px;
-            margin-top: 15px;
-            opacity: 0.6;
-        }
-
-        /* Lado Direito */
-        .right-panel {
-            width: 50%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: var(--bg-color);
-            position: relative;
-            overflow: visible;
-        }
-
-        .planet-image {
-            height: 150vh; 
-            width: 150vh; 
-            position: absolute;
-            right: -45vh; 
-            object-fit: cover;
-            border-radius: 50%;
-            box-shadow: 0 0 100px rgba(255, 255, 255, 0.1);
-            animation: rotatePlanet 120s linear infinite; 
-            transition: opacity 0.5s ease;
-            z-index: 1;
-        }
-
-        @keyframes rotatePlanet {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        .controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
             z-index: 10;
         }
 
-        #planetSelector {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 10px;
-            border-radius: 5px;
-            outline: none;
-            cursor: pointer;
-            font-size: 0.9rem;
-            backdrop-filter: blur(5px);
+        /* Esconde o contentor do SVG até o utilizador dar permissão */
+        #containerSeta {
+            display: none;
+            width: 100%;
+            height: 100%;
+            max-width: 400px;
         }
 
-        #gps-status {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            font-size: 0.7rem;
-            color: #444;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+        svg {
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
 <body>
 
-    <div id="overlay">
-        <button id="startBtn">Iniciar Experiência</button>
-    </div>
+    <!-- Botão necessário para pedir permissão aos sensores (Obrigatório no iOS) -->
+    <button id="startBtn">Ativar Seta Dinâmica</button>
 
-    <div class="left-panel">
-        <div class="speedometer">
-            <span class="speed-value" id="speed">0</span>
-            <span class="speed-unit">km/h</span>
-        </div>
-        <div id="gps-status">GPS Offline</div>
-    </div>
-
-    <div class="right-panel">
-        <img id="displayPlanet" class="planet-image" src="https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg" alt="Planeta">
-        <div class="controls">
-            <select id="planetSelector">
-                <option value="lua">🌙 Lua</option>
-                <option value="terra">🌍 Terra</option>
-                <option value="sol">☀️ Sol</option>
-                <option value="jupiter">🪐 Júpiter</option>
-                <option value="marte">🔴 Marte</option>
-            </select>
-        </div>
+    <div id="containerSeta">
+        <svg viewBox="0 0 100 200">
+            <defs>
+                <!-- Definição da ponta da seta (triângulo) que fica no fim da linha -->
+                <marker id="pontaSeta" viewBox="0 0 10 10" refX="5" refY="5"
+                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#333" />
+                </marker>
+            </defs>
+            
+            <!-- A nossa linha curva. 
+                 M: Move para baixo (50, 180)
+                 Q: Curva Quadrática. O primeiro par (50, 100) é o ponto de controlo que vamos mover com JS.
+                 O segundo par (50, 20) é o topo da seta. -->
+            <path id="linhaAnimada" d="M 50 180 Q 50 100 50 20" 
+                  stroke="#333" stroke-width="4" fill="none" 
+                  stroke-linecap="round" marker-end="url(#pontaSeta)" />
+        </svg>
     </div>
 
     <script>
-        const planets = {
-            lua: "https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg",
-            terra: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/The_Blue_Marble_%28remastered%29.jpg/600px-The_Blue_Marble_%28remastered%29.jpg",
-            sol: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg/600px-The_Sun_by_the_Atmospheric_Imaging_Assembly_of_NASA%27s_Solar_Dynamics_Observatory_-_20100819.jpg",
-            jupiter: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg/600px-Jupiter_and_its_shrunken_Great_Red_Spot.jpg",
-            marte: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/600px-OSIRIS_Mars_true_color.jpg",
-        };
+        // === VARIÁVEIS DE ESTADO ===
+        let ultimaDirecao = null; // Guarda a direção (alpha) da frame anterior
+        let pontoControloAtualX = 50; // O meio da tela no SVG (linha reta)
+        let pontoControloAlvoX = 50;  // Onde a linha *quer* ir dependendo da rotação
+        
+        // Parâmetros que podes ajustar!
+        const SENSIBILIDADE = 4; // Quão rápido a linha curva quando giras o telemóvel
+        const SUAVIZACAO = 0.1;  // Quão suave a linha acompanha o movimento (0.01 a 1)
 
-        const selector = document.getElementById('planetSelector');
-        const planetImg = document.getElementById('displayPlanet');
-        const overlay = document.getElementById('overlay');
-        const startBtn = document.getElementById('startBtn');
-
-        // --- FUNÇÃO PARA TELA CHEIA ---
-        function activateFullScreen() {
-            const docEl = document.documentElement;
-            
-            if (docEl.requestFullscreen) {
-                docEl.requestFullscreen();
-            } else if (docEl.mozRequestFullScreen) { /* Firefox */
-                docEl.mozRequestFullScreen();
-            } else if (docEl.webkitRequestFullscreen) { /* Chrome, Safari e Opera */
-                docEl.webkitRequestFullscreen();
-            } else if (docEl.msRequestFullscreen) { /* IE/Edge */
-                docEl.msRequestFullscreen();
+        // Função para iniciar os sensores ao clicar no botão
+        document.getElementById('startBtn').addEventListener('click', () => {
+            // Verifica se o dispositivo requer pedido de permissão (iOS 13+)
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            iniciarSeta();
+                        } else {
+                            alert("Permissão negada. A seta não vai funcionar.");
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // Dispositivos Android e navegadores mais antigos
+                iniciarSeta();
             }
-
-            // Esconde o overlay após clicar
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.style.display = 'none', 800);
-        }
-
-        startBtn.addEventListener('click', activateFullScreen);
-
-        // Troca de planeta
-        selector.addEventListener('change', (e) => {
-            const choice = e.target.value;
-            planetImg.style.opacity = '0';
-            setTimeout(() => {
-                planetImg.src = planets[choice];
-                planetImg.style.opacity = '1';
-            }, 500);
         });
 
-        // GPS
-        const speedElement = document.getElementById('speed');
-        const statusElement = document.getElementById('gps-status');
+        function iniciarSeta() {
+            // Esconde o botão e mostra a seta
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('containerSeta').style.display = 'block';
 
-        if ("geolocation" in navigator) {
-            navigator.geolocation.watchPosition(
-                (position) => {
-                    statusElement.innerText = "GPS Online";
-                    const speedMps = position.coords.speed;
-                    if (speedMps !== null && speedMps > 0) {
-                        speedElement.innerText = Math.round(speedMps * 3.6);
-                    } else {
-                        speedElement.innerText = "0";
-                    }
-                },
-                (error) => { statusElement.innerText = "Erro GPS"; },
-                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-            );
+            // Começa a ouvir os movimentos do dispositivo
+            window.addEventListener('deviceorientation', lidarComOrientacao);
+            
+            // Inicia o ciclo de animação
+            animarSeta();
+        }
+
+        function lidarComOrientacao(evento) {
+            let direcaoAtual = evento.alpha; // Valor de 0 a 360 graus
+
+            if (ultimaDirecao === null) {
+                ultimaDirecao = direcaoAtual;
+                return;
+            }
+
+            // Calcula a diferença entre a direção atual e a última (velocidade do giro)
+            let delta = direcaoAtual - ultimaDirecao;
+
+            // Corrige o salto matemático quando a bússola passa do grau 360 para o 0
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
+
+            // Define o alvo da curva. 50 é o centro. 
+            // Multiplicamos o giro pela sensibilidade.
+            pontoControloAlvoX = 50 + (delta * SENSIBILIDADE);
+
+            // Limita a curva para que a linha não saia da tela
+            if (pontoControloAlvoX < -50) pontoControloAlvoX = -50;
+            if (pontoControloAlvoX > 150) pontoControloAlvoX = 150;
+
+            ultimaDirecao = direcaoAtual;
+        }
+
+        function animarSeta() {
+            // 1. Movemos suavemente o ponto de controlo atual em direção ao alvo
+            pontoControloAtualX += (pontoControloAlvoX - pontoControloAtualX) * SUAVIZACAO;
+
+            // 2. A MAGIA DA ESTABILIZAÇÃO:
+            // Constantemente puxamos o ALVO de volta para o centro (50).
+            // Se o telemóvel parar de girar, o delta será 0 e isto fará a linha voltar ao estado reto.
+            pontoControloAlvoX += (50 - pontoControloAlvoX) * 0.05;
+
+            // 3. Atualizamos o HTML do SVG com a nova curva
+            const caminhoSeta = document.getElementById('linhaAnimada');
+            // M = início, Q = Ponto de Controlo X e Y, Fim X e Y
+            caminhoSeta.setAttribute('d', `M 50 180 Q ${pontoControloAtualX} 100 50 20`);
+
+            // Pede ao navegador para chamar esta função na próxima frame (cria o loop de vídeo fluido)
+            requestAnimationFrame(animarSeta);
         }
     </script>
 </body>
