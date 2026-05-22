@@ -1,224 +1,1415 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+<!doctype html>
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Pro-Dash Telemetry</title>
-    <style>
-        /* Estilo Base e Layout */
-        body {
-            background-color: #000;
-            color: #fff;
-            font-family: 'Courier New', Courier, monospace;
-            margin: 0;
-            display: grid;
-            grid-template-columns: 1fr 250px; 
-            height: 100vh;
-            overflow: hidden;
-        }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05070b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Painel Veicular">
+  <title>Painel Veicular GPS</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #cdb6ff;
+      --bg-deep: #aa89f5;
+      --panel: #030306;
+      --panel-strong: #08070d;
+      --ink: #f7f5ff;
+      --muted: #777084;
+      --soft: #c9c0dc;
+      --line: rgba(213, 193, 255, .18);
+      --violet: #8e58ff;
+      --violet-soft: #d7c1ff;
+      --violet-muted: #4c3579;
+      --green: #48f0a5;
+      --amber: #ffbd4a;
+      --red: #ff5571;
+      --cyan: #9d82ff;
+      --blue: #b699ff;
+      --shadow: 0 22px 60px rgba(63, 33, 121, .28);
+      --radius: 8px;
+      --frame-radius: 30px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
 
-        /* --- NOVO: Botão de Tela Cheia Discreto --- */
-        #fullscreen-btn {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(255, 255, 255, 0.05); /* Quase transparente */
-            border: 1px solid #333;
-            color: #555;
-            padding: 5px 8px;
-            cursor: pointer;
-            z-index: 9999;
-            border-radius: 3px;
-            font-size: 0.7rem;
-            transition: all 0.3s;
-        }
-        #fullscreen-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
-        }
+    * {
+      box-sizing: border-box;
+    }
 
-        /* Painel Principal (Esquerda) */
-        .main-panel {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            border-right: 1px solid #222;
-        }
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      overflow-x: hidden;
+      letter-spacing: 0;
+    }
 
-        .top-info {
-            display: flex;
-            justify-content: space-around; /* Ajustado para dar espaço ao botão lateral */
-            font-size: 1.2rem;
-            color: #ccc;
-        }
+    body {
+      min-height: 100dvh;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(255, 255, 255, .22), transparent 28%),
+        linear-gradient(145deg, #d9c8ff 0%, #c4a7ff 42%, #b79aff 100%);
+      display: grid;
+      place-items: center;
+    }
 
-        .speed-container {
-            text-align: center;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
+    button,
+    input,
+    select {
+      font: inherit;
+    }
 
-        #speed {
-            font-size: 12rem;
-            font-weight: bold;
-            margin: 0;
-            line-height: 1;
-            transition: color 0.3s;
-        }
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
 
-        /* Cores de Alerta de Velocidade */
-        .speed-normal { color: #fff; }
-        .speed-warning { color: #00ff00; text-shadow: 0 0 20px #00ff00; } 
-        .speed-danger { color: #ff0000; text-shadow: 0 0 20px #ff0000; }  
+    .app {
+      width: min(1180px, calc(100vw - 28px));
+      min-height: calc(100dvh - 28px);
+      padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, .48);
+      border-radius: var(--frame-radius);
+      box-shadow:
+        0 24px 64px rgba(69, 36, 137, .38),
+        inset 0 1px rgba(255, 255, 255, .18);
+      overflow: hidden;
+      position: relative;
+      isolation: isolate;
+    }
 
-        /* Barra Lateral de Códigos (Direita) */
-        .side-log {
-            background-color: #050505;
-            padding: 10px;
-            font-size: 0.8rem;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column-reverse; 
-            gap: 5px;
-        }
+    .app::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(143, 89, 255, .16), transparent 34%),
+        radial-gradient(circle at 72% 22%, rgba(151, 104, 255, .12), transparent 32%);
+      pointer-events: none;
+      z-index: -1;
+    }
 
-        .code-line {
-            white-space: nowrap;
-            animation: fadeIn 0.2s ease-out;
-        }
+    .topbar,
+    .footerbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+      position: relative;
+      z-index: 4;
+    }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
 
-        .code-up { color: #00ff00; }    
-        .code-down { color: #ff0000; }  
-        .code-idle { color: #ffff00; }  
+    .mark {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--violet-soft);
+      background: rgba(143, 88, 255, .14);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .16);
+      flex: 0 0 auto;
+    }
 
-        .bottom-location {
-            background: #111;
-            padding: 15px;
-            border-radius: 5px;
-            font-size: 0.9rem;
-            color: #888;
-        }
-    </style>
+    .mark svg,
+    .icon-button svg,
+    .text-button svg,
+    .map-link svg {
+      width: 20px;
+      height: 20px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    .title {
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.1;
+      font-weight: 750;
+      letter-spacing: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .status-line {
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      color: var(--soft);
+      font-size: 12px;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--violet);
+      box-shadow: 0 0 18px rgba(143, 88, 255, .8);
+      flex: 0 0 auto;
+    }
+
+    .dot.ready {
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(72, 240, 165, .78);
+    }
+
+    .dot.error {
+      background: var(--red);
+      box-shadow: 0 0 18px rgba(255, 85, 113, .78);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .icon-button,
+    .text-button,
+    .map-link {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .055);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .1);
+      cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+      touch-action: manipulation;
+    }
+
+    .icon-button {
+      width: 42px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0;
+    }
+
+    .text-button,
+    .map-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 12px;
+      color: var(--soft);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .icon-button:hover,
+    .text-button:hover,
+    .map-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(215, 193, 255, .34);
+      background: rgba(143, 88, 255, .16);
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.32fr) minmax(286px, .68fr);
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .cluster {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 12px;
+    }
+
+    .speed-panel {
+      position: relative;
+      min-height: 430px;
+      display: grid;
+      align-items: center;
+      justify-items: end;
+      overflow: hidden;
+      padding: 48px min(7vw, 70px) 44px 42%;
+      background: #020204;
+      border-radius: 24px;
+      isolation: isolate;
+    }
+
+    .speed-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(143, 88, 255, .1), transparent 32%),
+        radial-gradient(circle at 68% 46%, rgba(143, 88, 255, .08), transparent 38%);
+      pointer-events: none;
+      z-index: -4;
+    }
+
+    .speed-panel::after {
+      content: "";
+      position: absolute;
+      width: min(75vmin, 620px);
+      aspect-ratio: 1;
+      left: clamp(-220px, -18vw, -120px);
+      top: 50%;
+      transform: translateY(-50%);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, transparent 57%, rgba(9, 7, 14, .96) 58% 62%, transparent 63%),
+        repeating-conic-gradient(from 212deg, rgba(210, 198, 255, .34) 0deg 1.2deg, transparent 1.2deg 4.8deg);
+      mask: radial-gradient(circle, transparent 57%, #000 58% 63%, transparent 64%);
+      -webkit-mask: radial-gradient(circle, transparent 57%, #000 58% 63%, transparent 64%);
+      opacity: .82;
+      z-index: -1;
+    }
+
+    .gauge {
+      --progress: 0deg;
+      --remaining: 180deg;
+      --speed-color: var(--violet);
+      position: absolute;
+      width: min(78vmin, 660px);
+      aspect-ratio: 1;
+      left: clamp(-300px, -26vw, -165px);
+      top: 50%;
+      transform: translateY(-50%);
+      border-radius: 50%;
+      background:
+        conic-gradient(from 180deg, var(--violet-soft) 0deg var(--remaining), var(--speed-color) var(--remaining) 180deg, transparent 180deg 360deg);
+      mask: radial-gradient(circle, transparent 50%, #000 51% 69%, transparent 70%);
+      -webkit-mask: radial-gradient(circle, transparent 50%, #000 51% 69%, transparent 70%);
+      filter: drop-shadow(0 0 32px rgba(143, 88, 255, .28));
+      pointer-events: none;
+      z-index: -2;
+    }
+
+    .gauge::before {
+      content: "";
+      position: absolute;
+      inset: 19%;
+      border-radius: 50%;
+      border: 1px solid rgba(215, 193, 255, .16);
+    }
+
+    .gauge::after {
+      content: "";
+      position: absolute;
+      inset: 34%;
+      border-radius: 50%;
+      border: 1px solid rgba(143, 88, 255, .16);
+      pointer-events: none;
+    }
+
+    .speed-scale {
+      position: absolute;
+      left: 46px;
+      top: 54px;
+      bottom: 52px;
+      width: 124px;
+      display: grid;
+      grid-template-rows: repeat(5, 1fr);
+      align-items: center;
+      color: rgba(255, 255, 255, .45);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .speed-scale span {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .speed-scale span::before {
+      content: "";
+      width: 8px;
+      height: 2px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .55;
+    }
+
+    .speed-scale .active {
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    .speed-scale .active::before {
+      width: 42px;
+      background: var(--violet);
+      box-shadow: 0 0 12px rgba(143, 88, 255, .88);
+    }
+
+    .speed-meta {
+      position: absolute;
+      top: 28px;
+      right: 36px;
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--ink);
+      font-size: 15px;
+      z-index: 3;
+    }
+
+    .rec-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 8px;
+      border: 1px solid rgba(255, 255, 255, .09);
+      border-radius: 6px;
+      color: var(--ink);
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    .rec-badge::after {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ff244a;
+      box-shadow: 0 0 9px rgba(255, 36, 74, .9);
+    }
+
+    .clock-mini {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .clock-mini::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border: 3px solid currentColor;
+      border-radius: 50%;
+      opacity: .95;
+    }
+
+    .speed-readout {
+      width: min(100%, 340px);
+      text-align: left;
+      min-width: 0;
+      position: relative;
+      z-index: 3;
+    }
+
+    .speed-value {
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
+      min-width: min(100%, 236px);
+      min-height: 88px;
+      padding: 0 22px;
+      border-radius: 999px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02)),
+        #161a23;
+      box-shadow:
+        inset 0 1px rgba(255, 255, 255, .12),
+        0 18px 32px rgba(0, 0, 0, .28);
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(70px, 11vw, 118px);
+      line-height: 1;
+      font-weight: 780;
+      letter-spacing: 0;
+      color: var(--ink);
+      text-shadow: none;
+    }
+
+    .speed-unit {
+      margin-top: 18px;
+      color: var(--violet);
+      font-size: clamp(26px, 3vw, 36px);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .speed-source {
+      margin-top: 12px;
+      color: rgba(201, 192, 220, .76);
+      font-size: 14px;
+      min-height: 18px;
+    }
+
+    .speed-caption {
+      margin-bottom: 12px;
+      color: rgba(201, 192, 220, .76);
+      font-size: 18px;
+      font-weight: 720;
+    }
+
+    .speed-caption span {
+      margin-left: 8px;
+      color: rgba(201, 192, 220, .48);
+      font-size: 10px;
+      text-transform: uppercase;
+      vertical-align: middle;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .tile,
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, .045);
+      box-shadow: var(--shadow);
+    }
+
+    .tile {
+      min-height: 92px;
+      padding: 14px;
+      display: grid;
+      align-content: space-between;
+      min-width: 0;
+      box-shadow: inset 0 1px rgba(255, 255, 255, .08);
+    }
+
+    .label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(201, 192, 220, .68);
+      font-size: 12px;
+      line-height: 1.2;
+      text-transform: uppercase;
+      font-weight: 750;
+    }
+
+    .label svg {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+
+    .metric {
+      min-width: 0;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(24px, 4vw, 38px);
+      line-height: 1;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric small {
+      color: rgba(201, 192, 220, .62);
+      font-size: .46em;
+      font-weight: 700;
+    }
+
+    .side {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .heading-panel {
+      min-height: 158px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 16px;
+    }
+
+    .compass {
+      width: 128px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle, rgba(143, 88, 255, .22) 0 7%, transparent 8%),
+        repeating-conic-gradient(from 0deg, rgba(215, 193, 255, .28) 0deg 1deg, transparent 1deg 12deg),
+        #050408;
+      position: relative;
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 36px rgba(0, 0, 0, .55);
+      flex: 0 0 auto;
+    }
+
+    .compass span {
+      position: absolute;
+      color: rgba(201, 192, 220, .62);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    .compass .n { top: 8px; color: var(--violet-soft); }
+    .compass .e { right: 10px; }
+    .compass .s { bottom: 8px; }
+    .compass .w { left: 10px; }
+
+    .needle {
+      width: 6px;
+      height: 72px;
+      transform: rotate(var(--heading, 0deg));
+      transform-origin: center;
+      transition: transform .45s ease;
+      position: relative;
+    }
+
+    .needle::before,
+    .needle::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+    }
+
+    .needle::before {
+      top: 0;
+      border-bottom: 42px solid var(--violet);
+    }
+
+    .needle::after {
+      bottom: 0;
+      border-top: 30px solid var(--violet-soft);
+      opacity: .78;
+    }
+
+    .heading-copy {
+      min-width: 0;
+    }
+
+    .heading-value {
+      margin-top: 10px;
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(42px, 8vw, 74px);
+      line-height: .9;
+      font-weight: 840;
+    }
+
+    .heading-name {
+      margin-top: 8px;
+      color: rgba(201, 192, 220, .68);
+      font-weight: 750;
+      min-height: 20px;
+    }
+
+    .details {
+      min-height: 0;
+      padding: 14px;
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(215, 193, 255, .28) transparent;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .data-cell {
+      min-height: 78px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .04);
+      border: 1px solid rgba(255, 255, 255, .08);
+      padding: 12px;
+      min-width: 0;
+    }
+
+    .data-label {
+      color: rgba(201, 192, 220, .58);
+      font-size: 11px;
+      font-weight: 780;
+      text-transform: uppercase;
+      line-height: 1.2;
+    }
+
+    .data-value {
+      margin-top: 9px;
+      min-width: 0;
+      font-variant-numeric: tabular-nums;
+      font-size: 18px;
+      font-weight: 760;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+    }
+
+    .footerbar {
+      min-height: 46px;
+      color: rgba(201, 192, 220, .68);
+      font-size: 13px;
+    }
+
+    .alert {
+      color: var(--violet-soft);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (orientation: portrait), (max-width: 860px) {
+      body {
+        overflow-y: auto;
+        place-items: start center;
+      }
+
+      .app {
+        width: min(100vw - 16px, 720px);
+        min-height: calc(100dvh - 16px);
+        margin: 8px 0;
+      }
+
+      .main {
+        grid-template-columns: 1fr;
+      }
+
+      .speed-panel {
+        min-height: 430px;
+        padding-left: min(44%, 280px);
+      }
+
+      .side {
+        grid-template-rows: auto auto;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app {
+        width: calc(100vw - 14px);
+        padding: 10px;
+        gap: 10px;
+        border-radius: 22px;
+      }
+
+      .topbar,
+      .footerbar {
+        align-items: stretch;
+      }
+
+      .brand {
+        flex: 1 1 auto;
+      }
+
+      .status-line {
+        max-width: 48vw;
+      }
+
+      .speed-panel {
+        padding: 82px 18px 36px 42%;
+      }
+
+      .speed-meta {
+        right: 18px;
+        top: 22px;
+      }
+
+      .speed-scale {
+        left: 22px;
+        width: 104px;
+      }
+
+      .speed-value {
+        min-width: min(100%, 190px);
+        min-height: 74px;
+        padding-inline: 18px;
+      }
+
+      .text-button span,
+      .map-link span {
+        display: none;
+      }
+
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+
+      .tile {
+        min-height: 82px;
+      }
+
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .heading-panel {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+      }
+    }
+
+    @media (max-height: 720px) and (orientation: landscape) {
+      body {
+        place-items: center;
+      }
+
+      .app {
+        gap: 8px;
+        padding: 8px;
+        width: calc(100vw - 16px);
+        min-height: calc(100dvh - 16px);
+        border-radius: 24px;
+      }
+
+      .main {
+        gap: 8px;
+      }
+
+      .cluster,
+      .side {
+        gap: 8px;
+      }
+
+      .speed-panel {
+        min-height: 0;
+        padding: 44px 42px 34px 38%;
+      }
+
+      .gauge {
+        width: min(98vh, 560px);
+        left: clamp(-250px, -23vw, -150px);
+      }
+
+      .speed-panel::after {
+        width: min(92vh, 520px);
+        left: clamp(-180px, -16vw, -105px);
+      }
+
+      .speed-scale {
+        top: 38px;
+        bottom: 34px;
+        left: 28px;
+      }
+
+      .stats-row {
+        gap: 8px;
+      }
+
+      .tile {
+        min-height: 76px;
+        padding: 10px;
+      }
+
+      .heading-panel {
+        min-height: 120px;
+        padding: 10px;
+      }
+
+      .compass {
+        width: 100px;
+      }
+
+      .details {
+        padding: 10px;
+      }
+
+      .data-cell {
+        min-height: 64px;
+        padding: 10px;
+      }
+
+      .data-value {
+        font-size: 16px;
+      }
+    }
+  </style>
 </head>
 <body>
-
-    <!-- BOTÃO FULLSCREEN -->
-    <button id="fullscreen-btn" onclick="toggleFullScreen()">TELA CHEIA</button>
-
-    <div class="main-panel">
-        <div class="top-info">
-            <div id="clock">00:00:00</div>
-            <div id="weather">CLIMA: --°C</div>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M5 16l1.6-5.2A3 3 0 0 1 9.5 8h5a3 3 0 0 1 2.9 2.8L19 16"/>
+            <path d="M4 16h16"/>
+            <path d="M7 16v2M17 16v2"/>
+            <path d="M8 12h8"/>
+          </svg>
         </div>
-
-        <div class="speed-container">
-            <div id="speed" class="speed-normal">0</div>
-            <div style="font-size: 2rem; color: #444;">KM/H</div>
+        <div class="title">
+          <h1>Painel Veicular GPS</h1>
+          <div class="status-line">
+            <span id="gpsDot" class="dot"></span>
+            <span id="gpsStatus">Aguardando GPS</span>
+          </div>
         </div>
+      </div>
+      <div class="controls">
+        <button id="startButton" class="text-button" type="button" aria-label="Iniciar GPS">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2v4"/>
+            <path d="M12 18v4"/>
+            <path d="M2 12h4"/>
+            <path d="M18 12h4"/>
+            <circle cx="12" cy="12" r="4"/>
+          </svg>
+          <span>GPS</span>
+        </button>
+        <button id="fullscreenButton" class="icon-button" type="button" aria-label="Tela cheia">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
+            <path d="M16 3h3a2 2 0 0 1 2 2v3"/>
+            <path d="M21 16v3a2 2 0 0 1-2 2h-3"/>
+            <path d="M8 21H5a2 2 0 0 1-2-2v-3"/>
+          </svg>
+        </button>
+      </div>
+    </header>
 
-        <div class="bottom-location">
-            <div id="date">DATA: --/--/----</div>
-            <div id="address">Aguardando sinal do GPS...</div>
-        </div>
-    </div>
+    <section class="main" aria-label="Dashboard veicular">
+      <div class="cluster">
+        <section class="speed-panel panel" aria-labelledby="speedTitle">
+          <h2 id="speedTitle" class="sr-only">Velocidade atual</h2>
+          <div class="speed-meta" aria-hidden="true">
+            <span class="rec-badge">GPS</span>
+            <span class="clock-mini" id="clockValue">--:--</span>
+          </div>
+          <div class="speed-scale" aria-hidden="true">
+            <span>180</span>
+            <span>140</span>
+            <span class="active">100</span>
+            <span>60</span>
+            <span>20</span>
+          </div>
+          <div id="gauge" class="gauge" aria-hidden="true"></div>
+          <div class="speed-readout">
+            <div class="speed-caption">Velocidade <span>GPS</span></div>
+            <div id="speedValue" class="speed-value">0</div>
+            <div class="speed-unit">km/h</div>
+            <div id="speedSource" class="speed-source">GPS parado</div>
+          </div>
+        </section>
 
-    <div class="side-log" id="sideLog"></div>
+        <section class="stats-row" aria-label="Resumo de condução">
+          <article class="tile">
+            <div class="label">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 12h3l3 8 4-16 3 8h5"/>
+              </svg>
+              Máxima
+            </div>
+            <div id="maxSpeed" class="metric">0 <small>km/h</small></div>
+          </article>
+          <article class="tile">
+            <div class="label">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2a10 10 0 1 0 10 10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+              Média
+            </div>
+            <div id="avgSpeed" class="metric">0 <small>km/h</small></div>
+          </article>
+          <article class="tile">
+            <div class="label">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 19V5"/>
+                <path d="M18 19V5"/>
+                <path d="M6 8h12"/>
+                <path d="M6 16h12"/>
+              </svg>
+              Distância
+            </div>
+            <div id="distance" class="metric">0.00 <small>km</small></div>
+          </article>
+        </section>
+      </div>
 
-    <script>
-        let ultimaVelocidade = 0;
-        const speedEl = document.getElementById('speed');
-        const sideLog = document.getElementById('sideLog');
+      <aside class="side">
+        <section class="heading-panel panel" aria-label="Direção">
+          <div class="compass" aria-hidden="true">
+            <span class="n">N</span>
+            <span class="e">L</span>
+            <span class="s">S</span>
+            <span class="w">O</span>
+            <div id="needle" class="needle"></div>
+          </div>
+          <div class="heading-copy">
+            <div class="label">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m16 8-4 8-4-8 8 4-8 4"/>
+                <circle cx="12" cy="12" r="10"/>
+              </svg>
+              Rumo
+            </div>
+            <div id="headingValue" class="heading-value">--°</div>
+            <div id="headingName" class="heading-name">Sem movimento</div>
+          </div>
+        </section>
 
-        // --- NOVO: Função para Alternar Tela Cheia ---
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                // Se não estiver em tela cheia, solicita a entrada
-                document.documentElement.requestFullscreen().catch(err => {
-                    alert(`Erro ao tentar ativar tela cheia: ${err.message}`);
-                });
-                document.getElementById('fullscreen-btn').innerText = "SAIR TELA CHEIA";
-            } else {
-                // Se estiver em tela cheia, sai dela
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                    document.getElementById('fullscreen-btn').innerText = "TELA CHEIA";
-                }
-            }
+        <section class="details panel" aria-label="Dados do GPS">
+          <div class="details-grid">
+            <div class="data-cell">
+              <div class="data-label">Latitude</div>
+              <div id="latitude" class="data-value">--</div>
+            </div>
+            <div class="data-cell">
+              <div class="data-label">Longitude</div>
+              <div id="longitude" class="data-value">--</div>
+            </div>
+            <div class="data-cell">
+              <div class="data-label">Precisão</div>
+              <div id="accuracy" class="data-value">--</div>
+            </div>
+            <div class="data-cell">
+              <div class="data-label">Altitude</div>
+              <div id="altitude" class="data-value">--</div>
+            </div>
+            <div class="data-cell">
+              <div class="data-label">Atualização</div>
+              <div id="updatedAt" class="data-value">--</div>
+            </div>
+            <div class="data-cell">
+              <div class="data-label">Tempo</div>
+              <div id="elapsedTime" class="data-value">00:00</div>
+            </div>
+            <div class="data-cell">
+              <div class="data-label">Bateria</div>
+              <div id="battery" class="data-value">--</div>
+            </div>
+            <div class="data-cell">
+              <div class="data-label">Tela</div>
+              <div id="screenState" class="data-value">Normal</div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <footer class="footerbar">
+      <div id="alertText" class="alert">Toque em GPS para iniciar.</div>
+      <div class="actions">
+        <a id="mapLink" class="map-link" href="#" target="_blank" rel="noreferrer" aria-label="Abrir no mapa">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 18 3 21V6l6-3 6 3 6-3v15l-6 3-6-3Z"/>
+            <path d="M9 3v15"/>
+            <path d="M15 6v15"/>
+          </svg>
+          <span>Mapa</span>
+        </a>
+        <button id="resetButton" class="icon-button" type="button" aria-label="Zerar viagem">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7"/>
+            <path d="M3 3v6h6"/>
+          </svg>
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    const el = {
+      gpsDot: document.querySelector("#gpsDot"),
+      gpsStatus: document.querySelector("#gpsStatus"),
+      startButton: document.querySelector("#startButton"),
+      fullscreenButton: document.querySelector("#fullscreenButton"),
+      resetButton: document.querySelector("#resetButton"),
+      gauge: document.querySelector("#gauge"),
+      speedValue: document.querySelector("#speedValue"),
+      speedSource: document.querySelector("#speedSource"),
+      maxSpeed: document.querySelector("#maxSpeed"),
+      avgSpeed: document.querySelector("#avgSpeed"),
+      distance: document.querySelector("#distance"),
+      headingValue: document.querySelector("#headingValue"),
+      headingName: document.querySelector("#headingName"),
+      needle: document.querySelector("#needle"),
+      latitude: document.querySelector("#latitude"),
+      longitude: document.querySelector("#longitude"),
+      accuracy: document.querySelector("#accuracy"),
+      altitude: document.querySelector("#altitude"),
+      updatedAt: document.querySelector("#updatedAt"),
+      elapsedTime: document.querySelector("#elapsedTime"),
+      battery: document.querySelector("#battery"),
+      screenState: document.querySelector("#screenState"),
+      alertText: document.querySelector("#alertText"),
+      mapLink: document.querySelector("#mapLink"),
+      clockValue: document.querySelector("#clockValue")
+    };
+
+    const state = {
+      watchId: null,
+      wakeLock: null,
+      startedAt: null,
+      lastPosition: null,
+      distanceMeters: 0,
+      maxKmh: 0,
+      speedSamples: [],
+      lastHeading: null,
+      sensorHeading: null,
+      battery: null
+    };
+
+    const MAX_GAUGE_KMH = 180;
+    const MIN_MOVING_KMH = 1.5;
+    const MAX_SAMPLE_AGE = 120;
+
+    function fmt(value, digits = 0) {
+      return Number.isFinite(value) ? value.toFixed(digits) : "--";
+    }
+
+    function meters(value) {
+      return Number.isFinite(value) ? `${Math.round(value)} m` : "--";
+    }
+
+    function kmh(value) {
+      return Number.isFinite(value) ? Math.max(0, value * 3.6) : null;
+    }
+
+    function haversineMeters(a, b) {
+      const radius = 6371000;
+      const lat1 = a.coords.latitude * Math.PI / 180;
+      const lat2 = b.coords.latitude * Math.PI / 180;
+      const dLat = (b.coords.latitude - a.coords.latitude) * Math.PI / 180;
+      const dLon = (b.coords.longitude - a.coords.longitude) * Math.PI / 180;
+      const sinLat = Math.sin(dLat / 2);
+      const sinLon = Math.sin(dLon / 2);
+      const h = sinLat * sinLat + Math.cos(lat1) * Math.cos(lat2) * sinLon * sinLon;
+      return 2 * radius * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    }
+
+    function bearingDegrees(a, b) {
+      const lat1 = a.coords.latitude * Math.PI / 180;
+      const lat2 = b.coords.latitude * Math.PI / 180;
+      const dLon = (b.coords.longitude - a.coords.longitude) * Math.PI / 180;
+      const y = Math.sin(dLon) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    function headingLabel(degrees) {
+      if (!Number.isFinite(degrees)) return "Sem movimento";
+      const labels = ["Norte", "Nordeste", "Leste", "Sudeste", "Sul", "Sudoeste", "Oeste", "Noroeste"];
+      return labels[Math.round(degrees / 45) % 8];
+    }
+
+    function setStatus(kind, text) {
+      el.gpsDot.className = `dot ${kind === "ready" ? "ready" : kind === "error" ? "error" : ""}`;
+      el.gpsStatus.textContent = text;
+    }
+
+    function setMetric(node, value, unit, digits = 0) {
+      node.innerHTML = `${fmt(value, digits)} <small>${unit}</small>`;
+    }
+
+    function setSpeed(speedKmh, source) {
+      const safeSpeed = Number.isFinite(speedKmh) ? Math.max(0, speedKmh) : 0;
+      const progress = Math.min(safeSpeed / MAX_GAUGE_KMH, 1) * 180;
+      const color = safeSpeed >= 140 ? "var(--red)" : "var(--violet)";
+      el.gauge.style.setProperty("--progress", `${progress}deg`);
+      el.gauge.style.setProperty("--speed-color", color);
+      el.speedValue.textContent = Math.round(safeSpeed);
+      el.speedSource.textContent = source;
+    }
+
+    function updateClock() {
+      el.clockValue.textContent = new Date().toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function setHeading(degrees) {
+      if (!Number.isFinite(degrees)) {
+        el.headingValue.textContent = "--°";
+        el.headingName.textContent = "Sem movimento";
+        return;
+      }
+
+      state.lastHeading = degrees;
+      el.needle.style.setProperty("--heading", `${degrees}deg`);
+      el.headingValue.textContent = `${Math.round(degrees)}°`;
+      el.headingName.textContent = headingLabel(degrees);
+    }
+
+    function updateElapsed() {
+      if (!state.startedAt) {
+        el.elapsedTime.textContent = "00:00";
+        return;
+      }
+
+      const totalSeconds = Math.max(0, Math.floor((Date.now() - state.startedAt) / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      el.elapsedTime.textContent = hours > 0
+        ? `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+        : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function updateBattery() {
+      if (!state.battery) return;
+
+      const percent = Math.round(state.battery.level * 100);
+      const suffix = state.battery.charging ? " carregando" : "";
+      el.battery.textContent = `${percent}%${suffix}`;
+    }
+
+    function updateStats(speedKmh) {
+      if (Number.isFinite(speedKmh)) {
+        state.maxKmh = Math.max(state.maxKmh, speedKmh);
+        state.speedSamples.push(speedKmh);
+        if (state.speedSamples.length > MAX_SAMPLE_AGE) {
+          state.speedSamples.shift();
         }
+      }
 
-        // 1. Relógio e Data
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString('pt-BR');
-            document.getElementById('date').innerText = "DATA: " + now.toLocaleDateString('pt-BR');
+      const total = state.speedSamples.reduce((sum, item) => sum + item, 0);
+      const avg = state.speedSamples.length ? total / state.speedSamples.length : 0;
+      setMetric(el.maxSpeed, state.maxKmh, "km/h");
+      setMetric(el.avgSpeed, avg, "km/h");
+      setMetric(el.distance, state.distanceMeters / 1000, "km", 2);
+    }
+
+    function onPosition(position) {
+      const coords = position.coords;
+      const gpsKmh = kmh(coords.speed);
+      let speedKmh = gpsKmh;
+      let speedSource = gpsKmh === null ? "GPS calculado" : "Velocidade do GPS";
+      let heading = Number.isFinite(coords.heading) ? coords.heading : null;
+
+      if (state.lastPosition) {
+        const elapsed = (position.timestamp - state.lastPosition.timestamp) / 1000;
+        const distance = haversineMeters(state.lastPosition, position);
+        const accuracyLimit = Math.max(coords.accuracy || 0, state.lastPosition.coords.accuracy || 0, 30);
+
+        if (elapsed > 0 && distance < 1000 && distance > accuracyLimit * .35) {
+          state.distanceMeters += distance;
+          if (gpsKmh === null) {
+            speedKmh = (distance / elapsed) * 3.6;
+            speedSource = "Velocidade estimada";
+          }
+          const derivedHeading = bearingDegrees(state.lastPosition, position);
+          if (Number.isFinite(derivedHeading) && (speedKmh || 0) >= MIN_MOVING_KMH) {
+            heading = derivedHeading;
+          }
         }
-        setInterval(updateTime, 1000);
+      }
 
-        // 2. Gerador de Código Aleatório
-        function generateRandomCode(colorClass) {
-            const chars = "ABCDEF0123456789XRT";
-            let code = "FT_" + Array.from({length: 12}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-            
-            const line = document.createElement('div');
-            line.className = `code-line ${colorClass}`;
-            line.innerText = `> ${code}`;
-            
-            sideLog.prepend(line); 
+      state.lastPosition = position;
+      state.startedAt ||= Date.now();
 
-            if (sideLog.childNodes.length > 30) {
-                sideLog.removeChild(sideLog.lastChild);
-            }
+      const lat = coords.latitude;
+      const lon = coords.longitude;
+      const updated = new Date(position.timestamp);
+
+      setStatus("ready", `GPS ativo ±${Math.round(coords.accuracy || 0)} m`);
+      setSpeed(speedKmh, speedSource);
+      setHeading(Number.isFinite(heading) ? heading : state.sensorHeading);
+      updateStats(speedKmh);
+
+      el.latitude.textContent = fmt(lat, 6);
+      el.longitude.textContent = fmt(lon, 6);
+      el.accuracy.textContent = meters(coords.accuracy);
+      el.altitude.textContent = Number.isFinite(coords.altitude)
+        ? `${fmt(coords.altitude, 1)} m${Number.isFinite(coords.altitudeAccuracy) ? ` ±${Math.round(coords.altitudeAccuracy)} m` : ""}`
+        : "--";
+      el.updatedAt.textContent = updated.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+      el.mapLink.href = `https://www.google.com/maps?q=${lat},${lon}`;
+      el.alertText.textContent = speedKmh === null
+        ? "Posição recebida. Velocidade aguardando movimento."
+        : "Dados atualizados em tempo real.";
+    }
+
+    function onGeoError(error) {
+      const messages = {
+        1: "Permissão de localização negada.",
+        2: "Localização indisponível.",
+        3: "Tempo esgotado ao buscar GPS."
+      };
+      setStatus("error", "GPS indisponível");
+      el.alertText.textContent = messages[error.code] || "Não foi possível acessar o GPS.";
+    }
+
+    async function requestWakeLock() {
+      if (!("wakeLock" in navigator)) return;
+      try {
+        state.wakeLock = await navigator.wakeLock.request("screen");
+        state.wakeLock.addEventListener("release", () => {
+          el.screenState.textContent = "Normal";
+        });
+        el.screenState.textContent = "Acordada";
+      } catch {
+        el.screenState.textContent = "Normal";
+      }
+    }
+
+    async function startGps() {
+      if (!("geolocation" in navigator)) {
+        setStatus("error", "GPS não suportado");
+        el.alertText.textContent = "Este navegador não oferece suporte à localização.";
+        return;
+      }
+
+      setStatus("pending", "Buscando sinal");
+      el.alertText.textContent = "Aguardando permissão e sinal do GPS.";
+      await requestWakeLock();
+
+      if (state.watchId !== null) {
+        navigator.geolocation.clearWatch(state.watchId);
+      }
+
+      state.watchId = navigator.geolocation.watchPosition(onPosition, onGeoError, {
+        enableHighAccuracy: true,
+        maximumAge: 500,
+        timeout: 12000
+      });
+    }
+
+    async function toggleFullscreen() {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+        } else {
+          await document.exitFullscreen();
         }
+      } catch {
+        el.alertText.textContent = "Tela cheia precisa ser acionada pelo botão do navegador.";
+      }
+    }
 
-        // 3. Lógica do GPS e Velocidade
-        if ("geolocation" in navigator) {
-            navigator.geolocation.watchPosition((pos) => {
-                const speedMs = pos.coords.speed || 0;
-                const speedKmH = Math.round(speedMs * 3.6);
-                
-                speedEl.innerText = speedKmH;
+    function resetTrip() {
+      state.startedAt = Date.now();
+      state.lastPosition = null;
+      state.distanceMeters = 0;
+      state.maxKmh = 0;
+      state.speedSamples = [];
+      updateStats(0);
+      setSpeed(0, "Viagem zerada");
+      el.alertText.textContent = "Viagem zerada.";
+    }
 
-                speedEl.className = '';
-                if (speedKmH > 60) speedEl.classList.add('speed-danger');
-                else if (speedKmH > 40) speedEl.classList.add('speed-warning');
-                else speedEl.classList.add('speed-normal');
+    function setupOrientation() {
+      const applyHeading = event => {
+        const webkitHeading = Number(event.webkitCompassHeading);
+        const alpha = Number(event.alpha);
+        const heading = Number.isFinite(webkitHeading)
+          ? webkitHeading
+          : event.absolute && Number.isFinite(alpha)
+            ? (360 - alpha + 360) % 360
+            : null;
 
-                let colorClass = 'code-idle';
-                if (speedKmH === 0) {
-                    colorClass = 'code-idle';
-                } else if (speedKmH > ultimaVelocidade) {
-                    colorClass = 'code-up';
-                } else if (speedKmH < ultimaVelocidade) {
-                    colorClass = 'code-down';
-                }
-
-                generateRandomCode(colorClass);
-                ultimaVelocidade = speedKmH;
-
-                updateAddress(pos.coords.latitude, pos.coords.longitude);
-
-            }, (err) => console.error(err), { enableHighAccuracy: true });
+        if (!Number.isFinite(heading)) return;
+        state.sensorHeading = heading;
+        if (!state.lastPosition || state.speedSamples.at(-1) < MIN_MOVING_KMH) {
+          setHeading(heading);
         }
+      };
 
-        async function updateAddress(lat, lon) {
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-                const data = await res.json();
-                const addr = data.address;
-                document.getElementById('address').innerText = 
-                    `${addr.road || 'Rua n/a'}, ${addr.suburb || ''} - ${addr.city || addr.town || ''}`;
-            } catch (e) {
-                document.getElementById('address').innerText = "Erro ao localizar.";
-            }
-        }
-    </script>
+      window.addEventListener("deviceorientationabsolute", applyHeading, true);
+      window.addEventListener("deviceorientation", applyHeading, true);
+    }
+
+    async function setupBattery() {
+      if (!("getBattery" in navigator)) return;
+      try {
+        state.battery = await navigator.getBattery();
+        updateBattery();
+        state.battery.addEventListener("levelchange", updateBattery);
+        state.battery.addEventListener("chargingchange", updateBattery);
+      } catch {
+        el.battery.textContent = "--";
+      }
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && state.watchId !== null) {
+        requestWakeLock();
+      }
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      el.screenState.textContent = document.fullscreenElement ? "Tela cheia" : "Normal";
+    });
+
+    el.startButton.addEventListener("click", startGps);
+    el.fullscreenButton.addEventListener("click", toggleFullscreen);
+    el.resetButton.addEventListener("click", resetTrip);
+
+    setInterval(() => {
+      updateElapsed();
+      updateClock();
+    }, 1000);
+    updateClock();
+    setupBattery();
+    setupOrientation();
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>
